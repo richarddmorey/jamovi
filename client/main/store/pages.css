@@ -41,6 +41,12 @@
 
 .jmv-store-page-store .content {
     font-size: 32px ;
-    margin: 32px auto ;
+    margin: inherit auto ;
     text-align: center ;
+    width: 111.1111% ;
+    height: 111.1111% ;
+    border: 1px solid #ACACAC ;
+    box-sizing: border-box;
+    transform-origin: 0 0 ;
+    transform: scale(0.9, 0.9);
 }

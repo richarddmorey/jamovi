@@ -13,6 +13,7 @@ const util = require('util');
 const PageInstalled = require('./store/pageinstalled');
 const PageStore     = require('./store/pagestore');
 const PageSideload  = require('./store/pagesideload');
+const tarp = require('./utils/tarp');
 
 const Store = Backbone.View.extend({
     className: 'Store',
@@ -20,7 +21,9 @@ const Store = Backbone.View.extend({
 
         this.$el.addClass('jmv-store');
 
-        this.$close = $('<div class="jmv-store-button-close"><span class="mif-arrow-up"></span></div>').appendTo(this.$el);
+        this.$header = $('<div class="jmv-store-header"></div>').appendTo(this.$el);
+
+        this.$close = $('<div class="jmv-store-button-close"><span class="mif-arrow-up"></span></div>').appendTo(this.$header);
         this.$close.on('click', event => this.hide());
 
         this.$tabContainer = $('<div class="jmv-store-tab-container"></div>').appendTo(this.$el);
@@ -28,7 +31,7 @@ const Store = Backbone.View.extend({
 
         for (let tab of [
             { name: 'installed', title: 'Installed' },
-            { name: 'store', title: 'jamovi store' },
+            { name: 'store', title: 'Available' },
             { name: 'sideload', title: 'Sideload'} ]) {
 
             let $tab = $(util.format('<div class="jmv-store-tab" data-tab="%s"><div class="jmv-store-tab-inner">%s</div></div>', tab.name, tab.title));
@@ -104,9 +107,11 @@ const Store = Backbone.View.extend({
         this.$el.addClass('visible');
         if (this._selectedIndex === null)
             setTimeout(() => this._setSelected(1), 100);
+        tarp.show(false, 0.3);
     },
     hide: function() {
         this.$el.removeClass('visible');
+        tarp.hide();
     }
 });
 

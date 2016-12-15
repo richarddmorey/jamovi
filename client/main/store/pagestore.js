@@ -15,9 +15,11 @@ const PageStore = Backbone.View.extend({
 
         this.$el.addClass('jmv-store-page-store');
 
-        this.$head = $('<h2>jamovi store</h2>').appendTo(this.$el);
+        this.$iframe = $('<iframe class="content" src="https://store.jamovi.org/list.html"></iframe>').appendTo(this.$el);
+
+        /*this.$head = $('<h2>jamovi store</h2>').appendTo(this.$el);
         this.$body = $('<div class="body"></div>').appendTo(this.$el);
-        this.$content = $('<div class="content">Coming Soon!</div>').appendTo(this.$body);
+        this.$content = $('<div class="content">Coming Soon!</div>').appendTo(this.$body);*/
     },
 });
 
