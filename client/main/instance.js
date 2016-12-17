@@ -84,6 +84,9 @@ const Instance = Backbone.Model.extend({
 
             return this._instanceId;
 
+        }).catch(err => {
+
+            console.log(err);
         });
 
     },
@@ -107,10 +110,11 @@ const Instance = Backbone.Model.extend({
         }
         else {
 
-            let open = new coms.Messages.OpenRequest(filePath);
+            let open = new coms.Messages.OpenRequest();
+            open.filename = filePath;
             let request = new coms.Messages.ComsMessage();
-            request.payload = open.toArrayBuffer();
-            request.payloadType = "OpenRequest";
+            request.payload = coms.Messages.OpenRequest.encode(open).finish();
+            request.payloadType = 'OpenRequest';
             request.instanceId = this._instanceId;
 
             let onresolve = (response) => {
@@ -140,8 +144,8 @@ const Instance = Backbone.Model.extend({
 
         let save = new coms.Messages.SaveRequest(filePath);
         let request = new coms.Messages.ComsMessage();
-        request.payload = save.toArrayBuffer();
-        request.payloadType = "SaveRequest";
+        request.payload = coms.Messages.SaveRequest.encode(save).finish();
+        request.payloadType = 'SaveRequest';
         request.instanceId = this._instanceId;
 
         let prom = coms.send(request);
@@ -162,8 +166,8 @@ const Instance = Backbone.Model.extend({
         fs.path = path;
 
         let message = new coms.Messages.ComsMessage();
-        message.payload = fs.toArrayBuffer();
-        message.payloadType = "FSRequest";
+        message.payload = coms.Messages.FSRequest.encode(fs).finish();
+        message.payloadType = 'FSRequest';
         message.instanceId = this.instanceId();
 
         return coms.send(message)
@@ -186,7 +190,7 @@ const Instance = Backbone.Model.extend({
         analysisRequest.restartEngines = true;
 
         let request = new coms.Messages.ComsMessage();
-        request.payload = analysisRequest.toArrayBuffer();
+        request.payload = coms.Messages.AnalysisRequest.encode(analysisRequest).finish();
         request.payloadType = 'AnalysisRequest';
         request.instanceId = this._instanceId;
 
@@ -201,7 +205,7 @@ const Instance = Backbone.Model.extend({
         moduleRequest.path = path;
 
         let request = new coms.Messages.ComsMessage();
-        request.payload = moduleRequest.toArrayBuffer();
+        request.payload = coms.Messages.ModuleRequest.encode(moduleRequest).finish();
         request.payloadType = 'ModuleRequest';
         request.instanceId = this._instanceId;
 
@@ -216,7 +220,7 @@ const Instance = Backbone.Model.extend({
         moduleRequest.name = name;
 
         let request = new coms.Messages.ComsMessage();
-        request.payload = moduleRequest.toArrayBuffer();
+        request.payload = coms.Messages.ModuleRequest(moduleRequest).finish();
         request.payloadType = 'ModuleRequest';
         request.instanceId = this._instanceId;
 
@@ -236,8 +240,8 @@ const Instance = Backbone.Model.extend({
 
         let instanceRequest = new coms.Messages.InstanceRequest();
         let request = new coms.Messages.ComsMessage();
-        request.payload = instanceRequest.toArrayBuffer();
-        request.payloadType = "InstanceRequest";
+        request.payload = coms.Messages.InstanceRequest.encode(instanceRequest).finish();
+        request.payloadType = 'InstanceRequest';
 
         if (instanceId)
             request.instanceId = instanceId;
@@ -252,7 +256,7 @@ const Instance = Backbone.Model.extend({
 
         let info = new coms.Messages.InfoRequest();
         let request = new coms.Messages.ComsMessage();
-        request.payload = info.toArrayBuffer();
+        request.payload = coms.Messages.InfoRequest.encode(info).finish();
         request.payloadType = 'InfoRequest';
         request.instanceId = this._instanceId;
 
@@ -308,11 +312,11 @@ const Instance = Backbone.Model.extend({
 
         if (analysis.isReady) {
             let ppi = parseInt(72 * (window.devicePixelRatio || 1));
-            analysisRequest.setOptions(OptionsPB.toPB(analysis.options, ppi, coms.Messages));
+            analysisRequest.options = OptionsPB.toPB(analysis.options, ppi, coms.Messages);
         }
 
         let request = new coms.Messages.ComsMessage();
-        request.payload = analysisRequest.toArrayBuffer();
+        request.payload = coms.Messages.AnalysisRequest.encode(analysisRequest).finish();
         request.payloadType = 'AnalysisRequest';
         request.instanceId = this._instanceId;
 
@@ -336,6 +340,7 @@ const Instance = Backbone.Model.extend({
 
             if (analysis.isReady && _.has(response, "results") && response.results !== null) {
                 analysis.setResults(response.results, response.incAsText, response.syntax);
+                console.log(response.results.valueOf());
                 ok = true;
             }
 

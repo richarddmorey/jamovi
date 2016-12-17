@@ -172,7 +172,7 @@ const DataSetModel = Backbone.Model.extend({
         datasetPB.schema.push(columnPB);
 
         let request = new coms.Messages.ComsMessage();
-        request.payload = datasetPB.toArrayBuffer();
+        request.payload = coms.Messages.DataSetRR.encode(datasetPB).finish();
         request.payloadType = 'DataSetRR';
         request.instanceId = this.attributes.instanceId;
 
@@ -376,7 +376,7 @@ const DataSetViewModel = DataSetModel.extend({
         this.attributes.viewport = nv;
         this.attributes.cells = cells;
 
-        this.trigger("viewportChanged");
+        this.trigger('viewportChanged');
     },
     _requestCells(viewport) {
 
@@ -390,8 +390,8 @@ const DataSetViewModel = DataSetModel.extend({
         cellsRequest.columnEnd   = viewport.right;
 
         let request = new coms.Messages.ComsMessage();
-        request.payload = cellsRequest.toArrayBuffer();
-        request.payloadType = "DataSetRR";
+        request.payload = coms.Messages.DataSetRR.encode(cellsRequest).finish();
+        request.payloadType = 'DataSetRR';
         request.instanceId = this.attributes.instanceId;
 
         return coms.send(request).then(response => {
@@ -419,12 +419,16 @@ const DataSetViewModel = DataSetModel.extend({
 
                 for (let i = 0; i < column.values.length; i++) {
                     let inValue = column.values[i];
-                    let outValue;
-                    if (inValue.type === 'o')
-                        outValue = null;
+                    if (inValue.hasOwnProperty('d'))
+                        values[i] = inValue.d;
+                    else if (inValue.hasOwnProperty('i'))
+                        values[i] = inValue.i;
+                    else if (inValue.hasOwnProperty('o'))
+                        values[i] = null;
+                    else if (inValue.hasOwnProperty('s'))
+                        values[i] = inValue.s;
                     else
-                        outValue = inValue[inValue.type];
-                    values[i] = outValue;
+                        values[i] = null;
                 }
 
                 cells[colNo] = values;
@@ -451,40 +455,38 @@ const DataSetViewModel = DataSetModel.extend({
         cellsRequest.rowEnd      = viewport.bottom;
         cellsRequest.columnEnd   = viewport.right;
 
+        let columnsPB = new Array(nCols);
+
         for (let i = 0; i < nCols; i++) {
 
             let inCells = cells[i];
             let columnType = this.attributes.columns[viewport.left + i].measureType;
             let columnPB = new coms.Messages.DataSetRR.ColumnData();
+            let values = new Array(nRows);
 
             for (let j = 0; j < nRows; j++) {
                 let outValue = new coms.Messages.DataSetRR.ColumnData.CellValue();
                 let inValue = inCells[j];
-                if (inValue === null) {
+                if (inValue === null)
                     outValue.o = coms.Messages.SpecialValues.MISSING;
-                    outValue.type = 'o';
-                }
-                else if (typeof(inValue) === 'string') {
+                else if (typeof(inValue) === 'string')
                     outValue.s = inValue;
-                    outValue.type = 's';
-                }
-                else if (Math.floor(inValue) === inValue) {
+                else if (Math.floor(inValue) === inValue)
                     outValue.i = inValue;
-                    outValue.type = 'i';
-                }
-                else {
+                else
                     outValue.d = inValue;
-                    outValue.type = 'd';
-                }
-                columnPB.values.push(outValue);
+                values[j] = outValue;
             }
 
-            cellsRequest.data.push(columnPB);
+            columnPB.values = values;
+            columnsPB[i] = columnPB;
         }
 
+        cellsRequest.data = columnsPB;
+
         let request = new coms.Messages.ComsMessage();
-        request.payload = cellsRequest.toArrayBuffer();
-        request.payloadType = "DataSetRR";
+        request.payload = coms.Messages.DataSetRR.encode(cellsRequest).finish();
+        request.payloadType = 'DataSetRR';
         request.instanceId = this.attributes.instanceId;
 
         return coms.send(request).then(response => {

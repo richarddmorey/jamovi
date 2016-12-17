@@ -190,8 +190,8 @@ $(document).ready(() => {
 
         let settings = new coms.Messages.SettingsRequest();
         let request = new coms.Messages.ComsMessage();
-        request.payload = settings.toArrayBuffer();
-        request.payloadType = "SettingsRequest";
+        request.payload = coms.Messages.SettingsRequest.encode(settings).finish();
+        request.payloadType = 'SettingsRequest';
         request.instanceId = instance.instanceId();
 
         return coms.send(request);

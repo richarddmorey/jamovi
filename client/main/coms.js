@@ -1,11 +1,12 @@
 
 'use strict';
 
-var $ = require('jquery');
-var ProtoBuf = require('protobufjs');
-var Q = require('q');
+const $ = require('jquery');
+const ProtoBuf = require('protobufjs');
+const Q = require('q');
+const PB = require('./jamovi_pb');
 
-var Coms = function() {
+const Coms = function() {
 
     this._baseUrl = null;
     this._transId = 0;
@@ -13,6 +14,7 @@ var Coms = function() {
     this._listeners = [ ];
 
     this.connected = null;
+    this.Messages = PB.jamovi.coms;
 
     this.ready = new Promise((resolve, reject) => {
         this._notifyReady = resolve;
@@ -28,50 +30,33 @@ Coms.prototype.connect = function(sessionId) {
 
     if ( ! this.connected) {
 
-        this.connected = Promise.all([
+        this.connected = new Promise((resolve, reject) => {
 
-            new Promise((resolve, reject) => {
+            let url = this._baseUrl + 'coms';
+            url = url.replace('http', 'ws'); // http -> ws, https -> wss
 
-                var protoUrl = this._baseUrl + 'proto/coms.proto';
+            if (sessionId)
+                url += '/' + sessionId;
 
-                ProtoBuf.loadProtoFile(protoUrl, (err, builder) => {
-                    if (err) {
-                        reject(err);
-                    }
-                    else {
-                        this.Messages = builder.build().jamovi.coms;
-                        resolve();
-                    }
-                });
-            }),
-            new Promise((resolve, reject) => {
+            this._ws = new WebSocket(url);
+            this._ws.binaryType = 'arraybuffer';
 
-                let url = this._baseUrl + 'coms';
-                url = url.replace('http', 'ws'); // http -> ws, https -> wss
+            this._ws.onopen = () => {
+                console.log('opened!');
+                resolve();
+            };
 
-                if (sessionId)
-                    url += '/' + sessionId;
+            this._ws.onmessage = (event) => {
+                this.receive(event);
+            };
 
-                this._ws = new WebSocket(url);
-                this._ws.binaryType = 'arraybuffer';
-
-                this._ws.onopen = () => {
-                    console.log('opened!');
-                    resolve();
-                };
-
-                this._ws.onmessage = (event) => {
-                    this.receive(event);
-                };
-
-                this._ws.onerror = reject;
-                this._ws.onclose = (msg) => {
-                    console.log('websocket closed!');
-                    console.log(msg);
-                    this._notifyEvent('close');
-                };
-            })
-        ]);
+            this._ws.onerror = reject;
+            this._ws.onclose = (msg) => {
+                console.log('websocket closed!');
+                console.log(msg);
+                this._notifyEvent('close');
+            };
+        });
     }
 
     return this.connected;
@@ -80,7 +65,8 @@ Coms.prototype.connect = function(sessionId) {
 Coms.prototype.sendP = function(request) {
     this._transId++;
     request.id = this._transId;
-    this._ws.send(request.toArrayBuffer());
+    let encoded = this.Messages.ComsMessage.encode(request).finish();
+    this._ws.send(encoded);
 };
 
 Coms.prototype.send = function(request) {
@@ -90,7 +76,8 @@ Coms.prototype.send = function(request) {
         this._transId++;
 
         request.id = this._transId;
-        this._ws.send(request.toArrayBuffer());
+        let encoded = this.Messages.ComsMessage.encode(request).finish();
+        this._ws.send(encoded);
 
         this._transactions.push({
             id : this._transId,
@@ -104,7 +91,8 @@ Coms.prototype.send = function(request) {
 
 Coms.prototype.receive = function(event) {
 
-    var response = this.Messages.ComsMessage.decode(event.data);
+    let uint8 = new Uint8Array(event.data);
+    let response = this.Messages.ComsMessage.decode(uint8);
 
     if (response.id === 0) {
         this._notifyEvent('broadcast', response);
